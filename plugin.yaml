@@ -252,6 +252,44 @@ node_types:
       cloudify.interfaces.validation:
         creation: aws.ec2.elasticip.creation_validation
 
+  cloudify.aws.nodes.S3Bucket:
+    derived_from: cloudify.nodes.ObjectStorage
+    properties:
+      name:
+        description: >
+          The name of the bucket to create on S3.
+        type: string
+        default: ''
+        required: true
+      public:
+        description: >
+          Whether the bucket should be public or not.
+        type: boolean
+        default: false
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: aws.s3.bucket.create
+        delete: aws.s3.bucket.delete
+
+  cloudify.aws.nodes.S3Object:
+    derived_from: cloudify.nodes.ObjectStorage
+    properties:
+      contents:
+        description: >
+          What to store on S3.
+          This can either be the raw string, or a filename, if the load_contents_from_file property is set to true.
+        type: string
+        default: ''
+      load_contents_from_file:
+        description: >
+          Whether to treat the contents parameter as a filename.
+        type: boolean
+        default: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: aws.s3.object.create
+        delete: aws.s3.object.delete
+
   cloudify.aws.nodes.SecurityGroup:
     derived_from: cloudify.nodes.SecurityGroup
     properties:
@@ -892,4 +930,7 @@ relationships:
     derived_from: cloudify.relationships.contained_in
 
   cloudify.aws.relationships.security_group_contained_in_vpc:
+    derived_from: cloudify.relationships.contained_in
+
+  cloudify.aws.relationships.s3_object_contained_in_bucket:
     derived_from: cloudify.relationships.contained_in
