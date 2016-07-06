@@ -18,7 +18,7 @@ import os
 import ConfigParser
 
 # Third-party Imports
-from boto.s3 import S3Connection
+from boto import connect_s3
 
 # Cloudify Imports
 from ec2 import utils
@@ -40,12 +40,12 @@ class S3ConnectionClient():
         aws_config = (self._get_aws_config_property() or
                                self._get_aws_config_from_file())
         if aws_config:
-            return S3Connection(
+            return connect_s3(
                 aws_config['aws_access_key_id'],
                 aws_config['aws_secret_access_key'],
             )
         else:
-            return S3Connection()
+            return connect_s3()
 
     def _get_aws_config_property(self):
         node_properties = \

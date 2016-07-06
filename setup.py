@@ -32,7 +32,8 @@ setup(
     packages=[
         'core',
         'ec2',
-        'vpc'
+        'vpc',
+        's3',
     ],
 
     license='LICENSE',
