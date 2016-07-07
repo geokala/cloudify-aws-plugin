@@ -1,12 +1,10 @@
-from boto.exception import S3CreateError, S3PermissionsError
-from boto import s3
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
 from s3 import connection
 
 
-def _find_bucket(ctx):
+def _find_bucket_details(ctx):
     relationships = ctx.instance.relationships
 
     if len(relationships) == 0:
@@ -16,42 +14,46 @@ def _find_bucket(ctx):
             'relationship.'
         )
 
-    bucket_name = None
+    bucket_details = None
+    target = 'cloudify.aws.relationships.s3_object_contained_in_bucket'
     for relationship in relationships:
-        if relationship.type == 's3_object_contained_in_bucket':
-            bucket_name = relationship.target.node.properties['name']
+        if relationship.type == target:
+            bucket_details = relationship.target.node.properties
 
-    if bucket_name is None:
+    if bucket_details is None:
         raise NonRecoverableError(
-            'Could not get containing bucket name.'
+            'Could not get containing bucket.'
         )
 
-    return bucket_name
+    return bucket_details
 
 
 @operation
 def create(ctx):
-    _find_bucket(ctx)
+    bucket_details = _find_bucket_details(ctx)
 
     s3_client = connection.S3ConnectionClient().client()
-    bucket = s3_client.bucket.Bucket(name=bucket_name)
+    bucket = s3_client.get_bucket(bucket_details['name'])
 
     # Create key
-    key = s3.key.Key(bucket)
-    key.key = ctx.node.properties['name']
+    key = bucket.new_key(ctx.node.properties['name'])
+    key.content_type = ctx.node.properties['content_type']
 
     if ctx.node.properties['load_contents_from_file']:
-        contents = ctx.download_resource(contents)
+        contents = ctx.download_resource(ctx.node.properties['contents'])
         key.set_contents_from_filename(contents)
     else:
         key.set_contents_from_string(ctx.node.properties['contents'])
 
+    if bucket_details['public']:
+        key.make_public()
+
 
 @operation
 def delete(ctx):
-    _find_bucket(ctx)
+    bucket_details = _find_bucket_details(ctx)
 
     s3_client = connection.S3ConnectionClient().client()
-    bucket = s3_client.bucket.Bucket(name=bucket_name)
+    bucket = s3_client.get_bucket(bucket_details['name'])
 
     bucket.delete_key(ctx.node.properties['name'])

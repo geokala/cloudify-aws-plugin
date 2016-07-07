@@ -266,6 +266,13 @@ node_types:
           Whether the bucket should be public or not.
         type: boolean
         default: false
+      website_default_page:
+        description: >
+          If set, this will make the bucket into a web page,
+          with the default page for any path being this value.
+          May not contain a /.
+        type: string
+        default: ''
       aws_config:
         description: >
           A dictionary of values to pass to authenticate with the AWS API.
@@ -295,6 +302,12 @@ node_types:
           Whether to treat the contents parameter as a filename.
         type: boolean
         default: true
+      content_type:
+        description: >
+          What content type to use for this object.
+          Useful if the bucket is intended to be a website. (e.g. text/html for .html files).
+        type: string
+        default: 'application/octet-stream'
       aws_config:
         description: >
           A dictionary of values to pass to authenticate with the AWS API.

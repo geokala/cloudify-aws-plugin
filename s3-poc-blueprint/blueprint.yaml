@@ -27,6 +27,8 @@ node_templates:
         aws_access_key_id: { get_input: aws_access_key_id }
         aws_secret_access_key: { get_input: aws_secret_access_key }
       name: { get_input: bucket_name }
+      website_default_page: index.html
+      public: true
 
   string_object:
     type: cloudify.aws.nodes.S3Object
@@ -34,9 +36,10 @@ node_templates:
       aws_config:
         aws_access_key_id: { get_input: aws_access_key_id }
         aws_secret_access_key: { get_input: aws_secret_access_key }
-      name: string_object
-      contents: "This is an S3 object."
+      name: index.html
+      contents: '<html><head><title>Hello bukkit</title></head><body>Welcome to the POC bucket<img src="images/flickr-phoebesphotos-bucket" /></body></html>'
       load_contents_from_file: false
+      content_type: 'text/html'
     relationships:
       - target: bucket
         type: cloudify.aws.relationships.s3_object_contained_in_bucket
@@ -48,7 +51,7 @@ node_templates:
         aws_access_key_id: { get_input: aws_access_key_id }
         aws_secret_access_key: { get_input: aws_secret_access_key }
       # Note: Under CC, attribution required, hence the name
-      name: flickr-phoebesphotos-bucket
+      name: images/flickr-phoebesphotos-bucket
       contents: flickr-phoebesphotos-bucket.jpg
       load_contents_from_file: true
     relationships:

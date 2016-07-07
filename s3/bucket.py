@@ -19,13 +19,22 @@ def create(ctx):
     if ctx.node.properties['public']:
         bucket.make_public()
 
+    if ctx.node.properties['website_default_page'] != '':
+        website_default_page = ctx.node.properties['website_default_page']
+        if '/' in website_default_page:
+            raise NonRecoverableError(
+                'S3 bucket website default page must not contain a /'
+            )
+        else:
+            bucket.configure_website(suffix=website_default_page)
+
 
 @operation
 def delete(ctx):
     s3_client = connection.S3ConnectionClient().client()
     bucket_name = ctx.node.properties['name']
     try:
-        bucket = s3_client.bucket.Bucket(name=bucket_name)
+        bucket = s3_client.get_bucket(bucket_name)
         bucket.delete()
     except S3PermissionsError as err:
         # TODO: I'm guessing about this being the only error we should handle
