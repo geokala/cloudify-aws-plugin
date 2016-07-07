@@ -38,7 +38,7 @@ class S3ConnectionClient():
         """
 
         aws_config = (self._get_aws_config_property() or
-                               self._get_aws_config_from_file())
+                      self._get_aws_config_from_file())
         if aws_config:
             return connect_s3(
                 aws_config['aws_access_key_id'],

@@ -1,4 +1,4 @@
-from boto.exception import S3CreateError, S3PermissionsError
+from boto.exception import S3CreateError, S3PermissionsError, S3ResponseError
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
@@ -58,9 +58,7 @@ def delete(ctx):
     try:
         bucket = s3_client.get_bucket(bucket_name)
         bucket.delete()
-    except S3PermissionsError as err:
-        # TODO: I'm guessing about this being the only error we should handle
-        # in this way
+    except (S3PermissionsError, S3ResponseError) as err:
         raise NonRecoverableError(
-            'Bucket deletion failed: {}'.format(err.msg)
+            'Bucket deletion failed: {}'.format(err.message)
         )
