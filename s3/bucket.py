@@ -9,6 +9,24 @@ from s3 import connection
 def create(ctx):
     s3_client = connection.S3ConnectionClient().client()
     bucket_name = ctx.node.properties['name']
+
+    existing_buckets = s3_client.get_all_buckets()
+    existing_buckets = [bucket.name for bucket in existing_buckets]
+    if ctx.node.properties['use_existing_resource']:
+        if bucket_name in existing_buckets:
+            return True
+        else:
+            raise NonRecoverableError(
+                'Attempt to use existing bucket {bucket} failed, as no '
+                'bucket by that name exists.'.format(bucket=bucket_name)
+            )
+    else:
+        if bucket_name in existing_buckets:
+            raise NonRecoverableError(
+                'Bucket {bucket} already exists, but use_existing_resource '
+                'is not set to true.'.format(bucket=bucket_name)
+            )
+
     try:
         bucket = s3_client.create_bucket(bucket_name)
     except S3CreateError as err:
@@ -33,6 +51,10 @@ def create(ctx):
 def delete(ctx):
     s3_client = connection.S3ConnectionClient().client()
     bucket_name = ctx.node.properties['name']
+
+    if ctx.node.properties['use_existing_resource']:
+        return True
+
     try:
         bucket = s3_client.get_bucket(bucket_name)
         bucket.delete()

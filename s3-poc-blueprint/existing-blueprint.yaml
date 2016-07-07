@@ -1,0 +1,58 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+description: >
+  Do things with S3, cause happiness.
+
+imports:
+  - http://www.getcloudify.org/spec/cloudify/3.4/types.yaml
+  - plugin.yaml
+
+inputs:
+  aws_access_key_id:
+    description: >
+      The access key ID used to access the AWS API
+  aws_secret_access_key:
+    description: >
+      The secret key used to access the AWS API
+  bucket_name:
+    description: >
+      The name of the bucket to create
+    default: cloudify-aws-plugin-s3-poc
+
+node_templates:
+  bucket:
+    type: cloudify.aws.nodes.S3Bucket
+    properties:
+      aws_config:
+        aws_access_key_id: { get_input: aws_access_key_id }
+        aws_secret_access_key: { get_input: aws_secret_access_key }
+      name: { get_input: bucket_name }
+      use_existing_resource: true
+
+  string_object:
+    type: cloudify.aws.nodes.S3Object
+    properties:
+      aws_config:
+        aws_access_key_id: { get_input: aws_access_key_id }
+        aws_secret_access_key: { get_input: aws_secret_access_key }
+      name: index.html
+      contents: '<html><head><title>Hello bukkit</title></head><body>Welcome to the POC bucket<img src="images/flickr-phoebesphotos-bucket" /></body></html>'
+      load_contents_from_file: false
+      content_type: 'text/html'
+    relationships:
+      - target: bucket
+        type: cloudify.aws.relationships.s3_object_contained_in_bucket
+
+  file_object:
+    type: cloudify.aws.nodes.S3Object
+    properties:
+      aws_config:
+        aws_access_key_id: { get_input: aws_access_key_id }
+        aws_secret_access_key: { get_input: aws_secret_access_key }
+      # Note: Under CC, attribution required, hence the name
+      name: images/flickr-phoebesphotos-bucket
+      contents: flickr-phoebesphotos-bucket.jpg
+      load_contents_from_file: true
+    relationships:
+      - target: bucket
+        type: cloudify.aws.relationships.s3_object_contained_in_bucket

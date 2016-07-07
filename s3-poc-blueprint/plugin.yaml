@@ -273,6 +273,14 @@ node_types:
           May not contain a /.
         type: string
         default: ''
+      use_existing_resource:
+        description: >
+          Whether to use an existing bucket. If this is true, no bucket will be created and
+          if the bucket does not exist an error will be raised.
+          Additionally, if this is true the bucket will not be deleted on uninstall of this node.
+          If this is false and the bucket does exist, an error will be raised.
+        type: boolean
+        default: false
       aws_config:
         description: >
           A dictionary of values to pass to authenticate with the AWS API.

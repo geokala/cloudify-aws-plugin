@@ -28,6 +28,16 @@ def _find_bucket_details(ctx):
     return bucket_details
 
 
+def _bucket_is_public(bucket):
+    for grant in bucket.list_grants():
+        if (
+            grant.uri == 'http://acs.amazonaws.com/groups/global/AllUsers' and
+            grant.permission == 'READ'
+        ):
+            return True
+    return False
+
+
 @operation
 def create(ctx):
     bucket_details = _find_bucket_details(ctx)
@@ -45,7 +55,7 @@ def create(ctx):
     else:
         key.set_contents_from_string(ctx.node.properties['contents'])
 
-    if bucket_details['public']:
+    if _bucket_is_public(bucket):
         key.make_public()
 
 
