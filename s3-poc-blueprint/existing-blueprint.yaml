@@ -36,7 +36,7 @@ node_templates:
         aws_access_key_id: { get_input: aws_access_key_id }
         aws_secret_access_key: { get_input: aws_secret_access_key }
       name: index.html
-      contents: '<html><head><title>Hello bukkit</title></head><body>Welcome to the POC bucket<img src="images/flickr-phoebesphotos-bucket" /></body></html>'
+      contents: '<html><head><title>Hello bukkit</title></head><body><h1>Welcome to the POC bucket</h1><img src="images/flickr-phoebesphotos-bucket" />Image from phoebesphotos on flickr, used under CC</body></html>'
       load_contents_from_file: false
       content_type: 'text/html'
     relationships:
@@ -56,3 +56,8 @@ node_templates:
     relationships:
       - target: bucket
         type: cloudify.aws.relationships.s3_object_contained_in_bucket
+
+outputs:
+  endpoint:
+    description: The URL of your really well designed website.
+    value: { get_attribute: [ bucket, url ] }

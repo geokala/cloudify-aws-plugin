@@ -5,7 +5,7 @@ from cloudify.exceptions import NonRecoverableError
 from s3 import connection
 
 
-def _find_bucket_details(ctx):
+def _get_bucket(ctx):
     relationships = ctx.instance.relationships
 
     if len(relationships) == 0:
@@ -15,18 +15,29 @@ def _find_bucket_details(ctx):
             'relationship.'
         )
 
-    bucket_details = None
+    bucket_name = None
     target = 'cloudify.aws.relationships.s3_object_contained_in_bucket'
     for relationship in relationships:
         if relationship.type == target:
-            bucket_details = relationship.target.node.properties
+            bucket_name = relationship.target.node.properties['name']
 
-    if bucket_details is None:
+    if bucket_name is None:
         raise NonRecoverableError(
-            'Could not get containing bucket.'
+            'Could not get containing bucket name from related node.'
         )
 
-    return bucket_details
+    s3_client = connection.S3ConnectionClient().client()
+    try:
+        bucket = s3_client.get_bucket(bucket_name)
+    except S3ResponseError as err:
+        raise NonRecoverableError(
+            'Could not access bucket {bucket}: {error} '.format(
+                bucket=bucket_name,
+                error=err.message,
+            )
+        )
+
+    return bucket
 
 
 def _bucket_is_public(bucket):
@@ -41,22 +52,9 @@ def _bucket_is_public(bucket):
 
 @operation
 def create(ctx):
-    bucket_details = _find_bucket_details(ctx)
+    ctx.instance.runtime_properties['created'] = False
 
-    s3_client = connection.S3ConnectionClient().client()
-    bucket = s3_client.get_bucket(bucket_details['name'])
-
-    try:
-        bucket = s3_client.get_bucket(bucket_details['name'])
-    except S3ResponseError as err:
-        raise NonRecoverableError(
-            'Could not create key {name} in bucket {bucket} as this bucket '
-            'could not be accessed. Error was: {error}'.format(
-                name=ctx.node.properties['name'],
-                bucket=bucket_details['name'],
-                error=err.message,
-            )
-        )
+    bucket = _get_bucket(ctx)
 
     keys = bucket.get_all_keys()
     keys = [key.name for key in keys]
@@ -65,7 +63,7 @@ def create(ctx):
             'Cannot create key {name} in bucket {bucket} as a key by this '
             'name already exists in the bucket.'.format(
                 name=ctx.node.properties['name'],
-                bucket=bucket_details['name'],
+                bucket=bucket.name,
             )
         )
 
@@ -82,15 +80,19 @@ def create(ctx):
     if _bucket_is_public(bucket):
         key.make_public()
 
+    ctx.instance.runtime_properties['created'] = True
+
 
 @operation
 def delete(ctx):
-    # TODO: Currently this will happily delete an object it failed to create
-    # (e.g. due to a naming collision). Some mechanism should be put in place
-    # to prevent this
-    bucket_details = _find_bucket_details(ctx)
-
-    s3_client = connection.S3ConnectionClient().client()
-    bucket = s3_client.get_bucket(bucket_details['name'])
-
-    bucket.delete_key(ctx.node.properties['name'])
+    bucket = _get_bucket(ctx)
+    if ctx.instance.runtime_properties.get('created', False):
+        bucket.delete_key(ctx.node.properties['name'])
+    else:
+        raise NonRecoverableError(
+            'Creation of key {name} in bucket {bucket} failed, so it will not '
+            'be deleted.'.format(
+                name=ctx.node.properties['name'],
+                bucket=bucket.name,
+            )
+        )

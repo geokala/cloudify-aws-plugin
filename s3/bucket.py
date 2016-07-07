@@ -7,6 +7,8 @@ from s3 import connection
 
 @operation
 def create(ctx):
+    ctx.instance.runtime_properties['created'] = False
+
     s3_client = connection.S3ConnectionClient().client()
     bucket_name = ctx.node.properties['name']
 
@@ -29,6 +31,7 @@ def create(ctx):
 
     try:
         bucket = s3_client.create_bucket(bucket_name)
+        ctx.instance.runtime_properties['created'] = True
     except S3CreateError as err:
         raise NonRecoverableError(
             'Bucket creation failed: {}'.format(err.msg)
@@ -46,6 +49,10 @@ def create(ctx):
         else:
             bucket.configure_website(suffix=website_default_page)
 
+    ctx.instance.runtime_properties['url'] = (
+        'http://' + bucket.get_website_endpoint()
+    )
+
 
 @operation
 def delete(ctx):
@@ -54,6 +61,12 @@ def delete(ctx):
 
     if ctx.node.properties['use_existing_resource']:
         return True
+
+    if not ctx.instance.runtime_properties.get('created', False):
+        raise NonRecoverableError(
+            'Bucket {bucket} creation failed, so it will not be '
+            'deleted.'.format(bucket=bucket_name)
+        )
 
     try:
         bucket = s3_client.get_bucket(bucket_name)
